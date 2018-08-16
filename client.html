@@ -34,19 +34,21 @@
         <div class="col-md-8">
           <div class="chat" id="chat">
           </div>
-            <form id="messageForm">
-              <div class="form-group">
-                <label>Enter message</label>
-                <textarea class="form-control" id="message"></textarea>
-                <br />
-                <input type="submit" class="btn btn-primary" autocomplete="off" value="Send Message" />
-              </div>
-            </form>
+            <form ref='uploadForm' 
+      id='messageForm' 
+      action='/api/Upload' 
+      method='post' 
+      encType="multipart/form-data"><div class="form-group"><label>Enter message with picture</label><textarea class="form-control" id="message"></textarea><br />
+        <input type="file" name="imgUploader" />
+        <input type='submit' id="btnSubmit" class="btn btn-primary" value='Send Message' />
+        <p id="result"></p>
+      </div>
+    </form>     
         </div>
       </div>
     </div>
 <script src="/socket.io/socket.io.js"></script>
-<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="public/Scripts/jquery-3.3.1.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
 <script>
@@ -60,17 +62,63 @@ $(function () {
   var $messageArea = $('#messageArea');
   var $users = $('#users');
   var $username = $('#username');
+  var msgNumber = 0;
  
  $messageArea.hide();
 
   $messageForm.submit(function(e) {
-    e.preventDefault();
+    //stop submit the form, we will post it manually.
+        e.preventDefault();
+
+        // Get form
+        var form = $('#messageForm')[0];
+
+    // Create an FormData object 
+        var data = new FormData(form);
+
+    // If you want to add an extra field for the FormData
+        data.append("CustomField", "This is some extra data, testing");
+
+    // disabled the submit button
+        $("#btnSubmit").prop("disabled", true);
+
+        jQuery.ajax({
+            type: "POST",
+            enctype: 'multipart/form-data',
+            url: "/api/Upload",
+            data: data,
+            processData: false,
+            contentType: false,
+            cache: false,
+            timeout: 600000,
+            success: function (data) {
+
+                $("#result").text('post submitted');
+                $("#btnSubmit").prop("disabled", false);
+
+            },
+            error: function (e) {
+
+                $("#result").text(e.responseText);
+                console.log("ERROR : ", e);
+                $("#btnSubmit").prop("disabled", false);
+
+            }
+        });
+
     socket.emit('send message', $message.val());
-      $message.val('');
+      return false;
       });
 
   socket.on('new message', function(data){
-    $chat.append('<div class="chatMessage"><strong>'+ data.user +'</strong> : '+data.msg+'</div>');
+    msgNumber++;
+    if(!data.filename)
+    $chat.append('<div class="chatMessage" id="'+msgNumber+'"><strong>'+ data.user +'</strong> : '+data.msg+'<section><a href="#">Edit</a><a href="#">Delete</a></section></div>');
+    else{
+      $chat.append('<div class="chatMessage" id="'+msgNumber+'"><strong>'+ data.user +'</strong> : '+data.msg+'<img id="'+data.filename+'" src="public/Images/'+data.filename+'" width="100%" /><section><a href="#">Edit</a><a href="#">Delete</a></section></div>');
+    }
+    
+
   }); 
 
   $userForm.submit(function(e) {
